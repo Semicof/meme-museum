@@ -1,26 +1,14 @@
 const express = require("express");
-const {
-  getAllNft,
-  createNft,
-  getNftById,
-  updateNftById,
-  deleteNftById,
-} = require("../controller/nftController");
+const { createNft, getNftById, updateNft, deleteNft, transferNft } = require("../controller/nftController");
+const { authMiddleware } = require("../middlewares/authMiddlewares");
+
 const router = express.Router();
 
-// Get all NFTs
-router.get("/", getAllNft);
-
-// Create a new NFT
-router.post("/", createNft);
-
-// Read NFT by ID
 router.get("/:id", getNftById);
 
-// Update NFT by ID
-router.patch("/:id", updateNftById);
-
-// Delete NFT by ID
-router.delete("/:id", deleteNftById);
+router.post("/", authMiddleware, createNft);
+router.put("/:id", authMiddleware, updateNft);
+router.delete("/:id", authMiddleware, deleteNft);
+router.post("/:id/transfer", authMiddleware, transferNft);
 
 module.exports = router;
