@@ -10,7 +10,8 @@ const nftSchema = new mongoose.Schema({
   previousOwners: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
   createdAt: { type: Date, default: Date.now },
   listedForSale: { type: Boolean, default: false },
-  tags: [{ type: String }]
+  tags: [{ type: String }],
+  reactions: [{ type: mongoose.Schema.Types.ObjectId, ref: "Reaction" }]
 });
 
 module.exports = mongoose.model("Nft", nftSchema);

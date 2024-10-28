@@ -1,14 +1,14 @@
 const express = require("express");
-const { createNft, getNftById, updateNft, deleteNft, transferNft } = require("../controller/nftController");
+const {  getAllNFTs, getNFTById, createNFT } = require("../controller/nftController");
 const { authMiddleware } = require("../middlewares/authMiddlewares");
 
 const router = express.Router();
 
-router.get("/:id", getNftById);
+router.get("/", getAllNFTs);
 
-router.post("/", authMiddleware, createNft);
-router.put("/:id", authMiddleware, updateNft);
-router.delete("/:id", authMiddleware, deleteNft);
-router.post("/:id/transfer", authMiddleware, transferNft);
+router.get("/:id", getNFTById);
+
+router.post("/", authMiddleware, createNFT);
+
 
 module.exports = router;
