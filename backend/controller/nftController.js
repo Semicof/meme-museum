@@ -8,7 +8,6 @@ const provider = new ethers.providers.JsonRpcProvider(process.env.ALCHEMY_API_UR
 const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
 const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, wallet);
 
-// Upload image to IPFS via Pinata
 async function uploadFileToIPFS(file) {
   try {
     const formData = new FormData();
@@ -33,7 +32,6 @@ async function uploadFileToIPFS(file) {
   }
 }
 
-// Function to upload metadata to IPFS via Pinata
 async function uploadMetadataToIPFS(metadata) {
   try {
     const response = await fetch("https://api.pinata.cloud/pinning/pinJSONToIPFS", {
@@ -55,7 +53,6 @@ async function uploadMetadataToIPFS(metadata) {
   }
 }
 
-// Controller function to handle NFT creation
 exports.createNFT = async (req, res) => {
   try {
     const { name, description, price } = req.body;
@@ -100,7 +97,6 @@ exports.createNFT = async (req, res) => {
   }
 };
 
-// Pagination function to retrieve NFTs
 exports.getAllNFTs = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;

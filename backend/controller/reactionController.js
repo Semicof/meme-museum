@@ -2,7 +2,6 @@ const Reaction = require("../models/Reaction");
 const Nft = require("../models/Nft");
 const User = require("../models/User");
 
-// Add a new reaction
 exports.addReaction = async (req, res) => {
   const { userId, nftId, reactionType } = req.body;
 
@@ -26,7 +25,6 @@ exports.addReaction = async (req, res) => {
   }
 };
 
-// Get all reactions for a specific NFT
 exports.getReactionsForNft = async (req, res) => {
   try {
     const reactions = await Reaction.find({ nft: req.params.nftId }).populate("user", "name email");
@@ -36,7 +34,7 @@ exports.getReactionsForNft = async (req, res) => {
   }
 };
 
-// Get all reactions by a specific user
+
 exports.getReactionsByUser = async (req, res) => {
   try {
     const reactions = await Reaction.find({ user: req.params.userId }).populate("nft", "name description");
