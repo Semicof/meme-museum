@@ -1,10 +1,10 @@
+const axios = require("axios");
 const FormData = require("form-data");
-const fetch = require("node-fetch");
 const NFT = require("../model/Nft");
 const { ethers } = require("ethers");
 const { CONTRACT_ADDRESS, ABI } = require("../config");
 
-const provider = new ethers.providers.JsonRpcProvider(process.env.ALCHEMY_API_URL);
+const provider = new ethers.JsonRpcProvider(process.env.ALCHEMY_API_URL);
 const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
 const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, wallet);
 
@@ -16,16 +16,16 @@ async function uploadFileToIPFS(file) {
     const pinataOptions = JSON.stringify({ cidVersion: 1 });
     formData.append("pinataOptions", pinataOptions);
 
-    const response = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${PINATA_JWT}` },
-      body: formData,
+    const response = await axios.post("https://api.pinata.cloud/pinning/pinFileToIPFS", formData, {
+      headers: {
+        ...formData.getHeaders(),
+        Authorization: `Bearer ${PINATA_JWT}`
+      }
     });
 
-    if (!response.ok) throw new Error("Failed to upload file to IPFS");
+    if (!response.data) throw new Error("Failed to upload file to IPFS");
 
-    const data = await response.json();
-    return `https://gateway.pinata.cloud/ipfs/${data.IpfsHash}`;
+    return `https://gateway.pinata.cloud/ipfs/${response.data.IpfsHash}`;
   } catch (error) {
     console.error("Error uploading file:", error);
     throw error;
@@ -34,24 +34,24 @@ async function uploadFileToIPFS(file) {
 
 async function uploadMetadataToIPFS(metadata) {
   try {
-    const response = await fetch("https://api.pinata.cloud/pinning/pinJSONToIPFS", {
-      method: "POST",
+    const response = await axios.post("https://api.pinata.cloud/pinning/pinJSONToIPFS", metadata, {
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${PINATA_JWT}`,
-      },
-      body: JSON.stringify(metadata),
+        Authorization: `Bearer ${PINATA_JWT}`
+      }
     });
 
-    if (!response.ok) throw new Error("Failed to upload metadata to IPFS");
+    if (!response.data) throw new Error("Failed to upload metadata to IPFS");
 
-    const data = await response.json();
-    return `https://gateway.pinata.cloud/ipfs/${data.IpfsHash}`;
+    return `https://gateway.pinata.cloud/ipfs/${response.data.IpfsHash}`;
   } catch (error) {
     console.error("Error uploading metadata:", error);
     throw error;
   }
 }
+
+// The remaining functions for creating, fetching, listing, and purchasing NFTs remain the same.
+
 
 exports.createNFT = async (req, res) => {
   try {
@@ -146,3 +146,57 @@ exports.getNFTById = async (req, res) => {
     res.status(500).json({ message: "Error fetching NFT", error });
   }
 };
+
+exports.listNFTForSale = async (req, res) => {
+  try {
+    const { tokenId, price } = req.body;
+    const userId = req.user.id;
+
+    const nft = await NFT.findOne({ tokenId, owner: userId });
+    if (!nft) {
+      return res.status(404).json({ message: "NFT not found or you do not own it" });
+    }
+
+    const tx = await contract.reSellToken(tokenId, ethers.utils.parseEther(price), {
+      value: ethers.utils.parseEther(process.env.LISTING_PRICE),
+    });
+    await tx.wait();
+
+    nft.price = price;
+    nft.owner = process.env.MARKETPLACE_ADDRESS;
+    await nft.save();
+
+    res.status(200).json({ message: "NFT listed for sale", nft });
+  } catch (error) {
+    console.error("Error listing NFT for sale:", error);
+    res.status(500).json({ message: "Error listing NFT for sale", error });
+  }
+};
+
+exports.purchaseNFT = async (req, res) => {
+  try {
+    const { tokenId } = req.body;
+    const buyerId = req.user.id;
+
+    const nft = await NFT.findOne({ tokenId, owner: process.env.MARKETPLACE_ADDRESS });
+    if (!nft) {
+      return res.status(404).json({ message: "NFT not found or not available for sale" });
+    }
+
+    const price = ethers.utils.parseEther(nft.price.toString());
+    const tx = await contract.createMarketSale(tokenId, {
+      value: price,
+    });
+    await tx.wait();
+
+    nft.owner = buyerId;
+    nft.sold = true;
+    await nft.save();
+
+    res.status(200).json({ message: "NFT purchased successfully", nft });
+  } catch (error) {
+    console.error("Error purchasing NFT:", error);
+    res.status(500).json({ message: "Error purchasing NFT", error });
+  }
+};
+

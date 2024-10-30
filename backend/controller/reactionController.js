@@ -1,6 +1,6 @@
-const Reaction = require("../models/Reaction");
-const Nft = require("../models/Nft");
-const User = require("../models/User");
+const Reaction = require("../model/Reaction");
+const Nft = require("../model/Nft");
+const User = require("../model/User");
 
 exports.addReaction = async (req, res) => {
   const { userId, nftId, reactionType } = req.body;

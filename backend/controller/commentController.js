@@ -1,6 +1,6 @@
-const Comment = require("../models/Comment");
-const Nft = require("../models/Nft");
-const User = require("../models/User");
+const Comment = require("../model/Comment");
+const Nft = require("../model/Nft");
+const User = require("../model/User");
 
 
 exports.addComment = async (req, res) => {

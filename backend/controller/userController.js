@@ -1,59 +1,115 @@
 const User = require("../model/User");
-const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const { faker } = require('@faker-js/faker');
+const bcrypt = require("bcryptjs");
+
+function generateToken(walletAddress) {
+  return jwt.sign({ walletAddress }, process.env.JWT_SECRET, { expiresIn: '1h' });
+}
+
+function generateRandomUsername() {
+  return faker.person.fullName();
+}
+
+// Check if User Exists
+exports.checkUser = async (req, res) => {
+  const { walletAddress } = req.body;
+
+  try {
+    const user = await User.findOne({ walletAddress });
+
+    if (user) {
+      return res.status(200).json({ exists: true, message: "User exists. Please enter your password." });
+    } else {
+      return res.status(200).json({ exists: false, message: "User not found. Please register." });
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
 
 exports.registerUser = async (req, res) => {
-  const { name, email, password } = req.body;
-  try {
-    const existingUser = await User.findOne({ email });
-    if (existingUser) return res.status(400).json({ message: "Email already in use" });
+  const { walletAddress, password, name } = req.body;
 
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = await User.create({ name, email, password: hashedPassword });
-    
-    res.status(201).json({ message: "User registered successfully", user: newUser });
-  } catch (error) {
-    res.status(500).json({ message: "Error registering user", error });
-  }
-};
-
-exports.loginUser = async (req, res) => {
-  const { email, password } = req.body;
   try {
-    const user = await User.findOne({ email });
-    if (!user || !(await bcrypt.compare(password, user.password))) {
-      return res.status(400).json({ message: "Invalid credentials" });
+    const existingUser = await User.findOne({ walletAddress });
+
+    if (existingUser) {
+      return res.status(400).json({ message: "Wallet address already exists. Please log in." });
     }
 
-    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: "1d" });
-    res.status(200).json({ message: "Login successful", token, user });
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const newUser = new User({
+      walletAddress,
+      name: name || generateRandomUsername(),
+      password: hashedPassword,
+    });
+
+    await newUser.save();
+    const token = generateToken(newUser.walletAddress);
+    res.status(201).json({ message: "User registered successfully", token });
   } catch (error) {
-    res.status(500).json({ message: "Error logging in", error });
+    console.error(error);
+    res.status(500).json({ error: "Server error" });
   }
 };
 
+// Login Existing User
+exports.loginUser = async (req, res) => {
+  const { walletAddress, password } = req.body;
+
+  try {
+    const user = await User.findOne({ walletAddress });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found. Please register." });
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return res.status(401).json({ error: "Invalid password" });
+    }
+
+    const token = generateToken(user.walletAddress);
+    res.status(200).json({ message: "User authenticated", token });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
+// Get User Profile
 exports.getUserProfile = async (req, res) => {
   try {
-    const user = await User.findById(req.userId).select("-password");
+    const user = await User.findOne({ walletAddress: req.user.walletAddress });
     if (!user) return res.status(404).json({ message: "User not found" });
-    
-    res.status(200).json(user);
+    res.status(200).json({ user });
   } catch (error) {
-    res.status(500).json({ message: "Error fetching user profile", error });
+    console.error(error);
+    res.status(500).json({ error: "Server error" });
   }
-};
+}
 
+// Update User Profile
 exports.updateUserProfile = async (req, res) => {
-  const { name, bio, avatarUrl } = req.body;
-  try {
-    const updatedUser = await User.findByIdAndUpdate(
-      req.userId,
-      { name, bio, avatarUrl },
-      { new: true }
-    ).select("-password");
+  const { username, avatar } = req.body;
+  const walletAddress = req.user.walletAddress;
 
-    res.status(200).json({ message: "Profile updated successfully", user: updatedUser });
+  try {
+    const user = await User.findOneAndUpdate(
+      { walletAddress },
+      { username, avatar },
+      { new: true }
+    );
+
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    res.status(200).json({ message: "Profile updated", user });
   } catch (error) {
-    res.status(500).json({ message: "Error updating profile", error });
+    console.error(error);
+    res.status(500).json({ error: "Server error" });
   }
-};
+}

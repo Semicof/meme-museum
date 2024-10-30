@@ -1,12 +1,12 @@
 const mongoose = require("mongoose");
 
-const transactionSchema = new mongoose.Schema({
-  nft: { type: mongoose.Schema.Types.ObjectId, ref: "Nft", required: true },
-  from: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-  to: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-  transactionDate: { type: Date, default: Date.now },
-  transactionPrice: { type: Number, required: true },
-  transactionType: { type: String, enum: ["buy", "sell", "transfer"], required: true },
+const TransactionSchema = new mongoose.Schema({
+    user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    nft: { type: mongoose.Schema.Types.ObjectId, ref: "NFT", required: true },
+    type: { type: String, enum: ["ONCHAIN", "OFFCHAIN"], required: true },
+    status: { type: String, enum: ["PENDING", "SUCCESS", "FAILED"], default: "PENDING" },
+    hash: { type: String, default: null },
+    timestamp: { type: Date, default: Date.now },
 });
 
-module.exports = mongoose.model("Transaction", transactionSchema);
+module.exports = mongoose.model("Transaction", TransactionSchema);
