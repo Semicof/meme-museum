@@ -57,7 +57,6 @@ exports.registerUser = async (req, res) => {
   }
 };
 
-// Login Existing User
 exports.loginUser = async (req, res) => {
   const { walletAddress, password } = req.body;
 
@@ -81,7 +80,6 @@ exports.loginUser = async (req, res) => {
   }
 };
 
-// Get User Profile
 exports.getUserProfile = async (req, res) => {
   try {
     const user = await User.findOne({ walletAddress: req.user.walletAddress });
@@ -93,23 +91,50 @@ exports.getUserProfile = async (req, res) => {
   }
 }
 
-// Update User Profile
 exports.updateUserProfile = async (req, res) => {
-  const { username, avatar } = req.body;
+  const { name, avatarUrl, bio } = req.body;
   const walletAddress = req.user.walletAddress;
 
   try {
     const user = await User.findOneAndUpdate(
       { walletAddress },
-      { username, avatar },
+      { name, avatarUrl, bio },
       { new: true }
     );
 
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    res.status(200).json({ message: "Profile updated", user });
+    res.status(200).json({ message: "Profile updated" });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Server error" });
   }
 }
+
+
+exports.changePassword = async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  const walletAddress = req.user.walletAddress;
+
+  try {
+    const user = await User.findOne({ walletAddress });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
+    if (!isCurrentPasswordValid) {
+      return res.status(401).json({ message: "Current password is incorrect" });
+    }
+
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+
+    user.password = hashedNewPassword;
+    await user.save();
+
+    res.status(200).json({ message: "Password changed successfully" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Server error" });
+  }
+};
