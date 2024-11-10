@@ -50,16 +50,14 @@ async function uploadMetadataToIPFS(metadata) {
   }
 }
 
-// The remaining functions for creating, fetching, listing, and purchasing NFTs remain the same.
-
 
 exports.createNFT = async (req, res) => {
   try {
-    const { name, description, price } = req.body;
+    const { name, description, price, file } = req.body;
     const userId = req.user.id;
 
     // Step 1: Upload Image to IPFS
-    const imageIPFSLink = await uploadFileToIPFS(req.file);
+    const imageIPFSLink = await uploadFileToIPFS(file);
 
     // Step 2: Create Metadata and Upload to IPFS
     const metadata = {
